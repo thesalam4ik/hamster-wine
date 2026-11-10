@@ -11,6 +11,8 @@ and its origin in its message:
 - `msync`, `d3dmetal`: from hsr-wine-d3dmetal (LGPL-2.1-or-later), partly derived from CrossOver FOSS.
 - `dxmt`: from [bedrock-mac](https://github.com/1JRobertson/bedrock-mac) (LGPL-2.1-or-later).
 - `afunix`: Wine merge request !7650 by Ally Sommers, Ralf Habacker and Giang Nguyen.
+- `opengl-extensions`: Wine commit 1c2d909829c757fdf70c8d863642cd0ae9b81e59 by Rémi Bernon (in Wine 11.19),
+  unmodified, added 2026-11-11. Drop it when the pin reaches 11.19.
 - `fps-log`, `window-title`, `bundle-icon`, `com-context`, `storage-file`, `bcp47mrm`: macrock-engine and
   SiliconBedrock authors.
 

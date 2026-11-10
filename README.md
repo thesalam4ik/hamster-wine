@@ -49,6 +49,7 @@ patch, push, and the new runtime is out. `package.json` of the newest release is
 | `bundle-icon` | keep the host app's Dock icon | `WINEMAC_KEEP_BUNDLE_ICON=1` |
 | `afunix` | AF_UNIX sockets (Wine MR !7650) | |
 | `com-context`, `storage-file`, `bcp47mrm` | WinRT/COM pieces modern games' runtimes call | |
+| `opengl-extensions` | upstream fix (Wine 11.19): OpenGL contexts below 3.0 list their GL extensions again; 11.17 gave legacy OpenGL games none, so no framebuffer objects | |
 
 ## Working on a patch
 
