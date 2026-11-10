@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "flavours": {
+    "hamster": {
+      "description": "Mainline Wine plus our macOS patch series",
+      "url": "https://gitlab.winehq.org/wine/wine.git",
+      "ref": "wine-11.17",
+      "commit": "36b6a2cf679fb395f668a917b76537190e212d9c",
+      "series": "components/wine/series",
+      "license": "LGPL-2.1-or-later"
+    }
+  }
+}

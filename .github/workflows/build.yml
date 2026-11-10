@@ -1,0 +1,53 @@
+name: build
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# One build per branch; a newer push replaces a running one.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 180
+    permissions:
+      contents: write # the release, on main only
+    env:
+      WORK: /private/tmp/hamster-build/engine.noindex # scripts/lib.sh's default
+    steps:
+      - uses: actions/checkout@v4
+      # Compiler output and the pinned downloads (llvm-mingw, Gcenx): the scripts verify each
+      # download's SHA-256 again on every run.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.WORK }}/ccache
+            ${{ env.WORK }}/downloads
+          key: wine-${{ runner.os }}-${{ github.sha }}
+          restore-keys: wine-${{ runner.os }}-
+      # The build ends by running the x86_64 loader (wine --version).
+      - run: softwareupdate --install-rosetta --agree-to-license || true
+      - run: scripts/bootstrap.sh
+      - run: scripts/build.sh
+      - run: scripts/package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime
+          path: ${{ env.WORK }}/packages
+          retention-days: 7
+      - name: Release a runtime id that has none yet
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(ls "$WORK/dist")
+          if gh release view "$id" >/dev/null 2>&1; then
+            echo "Release $id exists: nothing to publish."
+            exit 0
+          fi
+          gh release create "$id" "$WORK"/packages/* --target "$GITHUB_SHA" --title "$id" \
+            --notes "Wine runtime \`$id\` for Hamster Launcher. Source: \`$id-source.tar.gz\`; licences: \`licenses/\` in the runtime and NOTICE.md."

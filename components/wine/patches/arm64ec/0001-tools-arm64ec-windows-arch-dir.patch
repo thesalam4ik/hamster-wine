@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hamster Launcher <noreply@hamsterlauncher.app>
+Date: Sat, 8 Nov 2026 00:00:00 +0000
+Subject: [PATCH] tools: look for ARM64EC PE files in arm64ec-windows
+
+get_arch_dir mapped CPU_ARM64EC to "aarch64", but this Wine builds ARM64EC
+modules into arm64ec-windows (every output directory and the generated
+Makefile dependencies use it). widl therefore searched aarch64-windows for
+imported type libraries and failed with "cannot find stdole2.tlb" when
+building ATL for the arm64 runtime (ADR 0003). Map CPU_ARM64EC to
+"arm64ec" so the build tools agree with where the files are.
+
+Topic: arm64ec
+---
+ tools/tools.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/tools.h b/tools/tools.h
+index 224a738..adfeaba 100644
+--- a/tools/tools.h
++++ b/tools/tools.h
+@@ -695,7 +695,7 @@ static inline const char *get_arch_dir( struct target target )
+         [CPU_x86_64]  = "x86_64",
+         [CPU_ARM]     = "arm",
+         [CPU_ARM64]   = "aarch64",
+-        [CPU_ARM64EC] = "aarch64",
++        [CPU_ARM64EC] = "arm64ec",
+     };
+
+     if (!cpu_names[target.cpu]) return "";
+--
+2.39.5
