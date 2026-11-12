@@ -15,7 +15,7 @@ and its origin in its message:
   unmodified, added 2026-11-11. Drop it when the pin reaches 11.19.
 - `fps-log`, `window-title`, `bundle-icon`, `com-context`, `storage-file`, `bcp47mrm`: macrock-engine and
   SiliconBedrock authors.
-- `host-loader`: written for Hamster Launcher, added 2026-11-12.
+- `host-loader`, `background-fps`: written for Hamster Launcher, added 2026-11-12.
 
 ## Scripts
 

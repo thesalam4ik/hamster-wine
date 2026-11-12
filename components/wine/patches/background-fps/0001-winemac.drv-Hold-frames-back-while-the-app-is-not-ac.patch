@@ -1,0 +1,84 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: CrashSystemZ <100166199+CrashSystemZ@users.noreply.github.com>
+Date: Thu, 12 Nov 2026 18:18:36 +0100
+Subject: [PATCH] winemac.drv: Hold frames back while the app is not active, on
+ request.
+
+With WINEMAC_BACKGROUND_FPS=<n>, a Metal layer hands out at most n drawables a second while
+the app is not the active one: a game left behind another app (Direct3D through D3DMetal,
+or Vulkan) stops taking the processor and the GPU from what the user is doing there. While
+the app is active nothing is held; the check is one atomic load a frame.
+
+Original work for Hamster Launcher (LGPL-2.1-or-later).
+
+Topic: background-fps
+---
+ dlls/winemac.drv/d3dmetal_objc.m | 42 ++++++++++++++++++++++++++++++++
+ 1 file changed, 42 insertions(+)
+
+diff --git a/dlls/winemac.drv/d3dmetal_objc.m b/dlls/winemac.drv/d3dmetal_objc.m
+--- a/dlls/winemac.drv/d3dmetal_objc.m
++++ b/dlls/winemac.drv/d3dmetal_objc.m
+@@ -27,6 +27,7 @@
+ #import <objc/runtime.h>
+ #include <mach/mach_time.h>
+ #include <os/lock.h>
++#include <stdatomic.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ 
+@@ -83,6 +84,46 @@ static void fps_log_frame(void)
+     os_unfair_lock_unlock(&lock);
+ }
+ 
++/* With WINEMAC_BACKGROUND_FPS=<n>, frames are held back while the app is not the active one, so
++ * that at most n are presented a second: a game left behind another app stops competing with
++ * what the user is doing there. Nothing is held while the app is active. */
++static void background_fps_hold(void)
++{
++    static dispatch_once_t once;
++    static os_unfair_lock lock = OS_UNFAIR_LOCK_INIT;
++    static atomic_int inactive;
++    static uint64_t interval, last;
++    uint64_t now, due;
++
++    dispatch_once(&once, ^{
++        const char *value = getenv("WINEMAC_BACKGROUND_FPS");
++        int fps = value ? atoi(value) : 0;
++        mach_timebase_info_data_t timebase;
++        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
++
++        if (fps <= 0) return;
++        mach_timebase_info(&timebase);
++        interval = 1000000000ull / fps * timebase.denom / timebase.numer;
++        /* The app's state is AppKit's to say, on the main thread; frames come from any thread. */
++        [center addObserverForName:NSApplicationDidResignActiveNotification object:nil
++                             queue:[NSOperationQueue mainQueue]
++                        usingBlock:^(NSNotification *note){ atomic_store(&inactive, 1); }];
++        [center addObserverForName:NSApplicationDidBecomeActiveNotification object:nil
++                             queue:[NSOperationQueue mainQueue]
++                        usingBlock:^(NSNotification *note){ atomic_store(&inactive, 0); }];
++        dispatch_async(dispatch_get_main_queue(), ^{ atomic_store(&inactive, ![NSApp isActive]); });
++    });
++    if (!interval || !atomic_load(&inactive)) return;
++
++    os_unfair_lock_lock(&lock);
++    now = mach_absolute_time();
++    due = last + interval;
++    if (due < now) due = now;  /* a frame that is late anyway is not held */
++    last = due;
++    os_unfair_lock_unlock(&lock);
++    if (due > now) mach_wait_until(due);
++}
++
+ @implementation WineMetalLayer
+ 
+     /* Extend [CAMetalLayer nextDrawable] so client_surface_present() can be
+@@ -115,6 +156,7 @@ @implementation WineMetalLayer
+             }
+         }
+ 
++        background_fps_hold();
+         fps_log_frame();
+         return [super nextDrawable];
+     }
