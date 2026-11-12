@@ -26,3 +26,4 @@ bundle-icon/0001-winemac.drv-Keep-the-app-bundle-s-icon-on-request.patch
 window-title/0002-winemac.drv-Replace-window-titles-with-MACROCK_WINDOW_T.patch
 arm64ec/0001-tools-arm64ec-windows-arch-dir.patch
 opengl-extensions/0001-win32u-Parse-extensions-directly-into-the-BOOLEAN-set.patch
+host-loader/0001-ntdll-Start-child-processes-with-the-loader-named-by.patch

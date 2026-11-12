@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: CrashSystemZ <100166199+CrashSystemZ@users.noreply.github.com>
+Date: Thu, 12 Nov 2026 17:36:37 +0100
+Subject: [PATCH] ntdll: Start child processes with the loader named by
+ WINELOADER.
+
+A process Wine starts runs the loader beside ntdll.so, whatever loader the first process
+ran. A launcher that starts a game from a copy of the loader inside an app bundle (so that
+macOS takes the process for that app, and gives it Game Mode) lost that with the first
+child: a game started by a stub (Unreal's Game.exe starting Game-Win64-Shipping.exe) ran
+as plain Wine.
+
+With WINELOADER set to an absolute path of an executable, child processes run that loader.
+The variable is inherited, so the whole process tree does. The loader must have ntdll.so
+beside it, as any copy of the loader has to.
+
+Original work for Hamster Launcher (LGPL-2.1-or-later).
+
+Topic: host-loader
+---
+ dlls/ntdll/unix/loader.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -393,6 +393,7 @@ static void set_config_dir(void)
+ static void init_paths(void)
+ {
+     Dl_info info;
++    const char *loader;
+ 
+     if (!dladdr( init_paths, &info ) || !(ntdll_dir = realpath_dirname( info.dli_fname )))
+         fatal_error( "cannot get path to ntdll.so\n" );
+@@ -408,6 +409,11 @@ static void init_paths(void)
+         bin_dir = build_relative_path( dll_dir, LIBDIR "/wine", BINDIR );
+         data_dir = build_relative_path( dll_dir, LIBDIR "/wine", DATADIR "/wine" );
+         wineloader = build_path( ntdll_dir, "wine" );
++        /* A launcher that starts Wine from a copy of this loader inside an app bundle names the
++         * copy here, so that child processes run it too. macOS knows a process by the app whose
++         * main executable it is: one that runs this loader is nobody's, and gets no Game Mode. */
++        if ((loader = getenv( "WINELOADER" )) && loader[0] == '/' && !access( loader, X_OK ))
++            wineloader = strdup( loader );
+     }
+ 
+     set_dll_path();

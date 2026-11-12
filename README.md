@@ -47,6 +47,7 @@ patch, push, and the new runtime is out. `package.json` of the newest release is
 | `fps-log` | one line of frame pacing per second (D3DMetal path) | `MACROCK_FPS_LOG` |
 | `window-title` | launcher-chosen window titles | `MACROCK_WINDOW_TITLE[_SUFFIX]` |
 | `bundle-icon` | keep the host app's Dock icon | `WINEMAC_KEEP_BUNDLE_ICON=1` |
+| `host-loader` | child processes run the loader the launcher names (a copy inside the game's app bundle), so macOS takes a game started by a stub for that app too, and gives it Game Mode | `WINELOADER=<absolute path>` |
 | `afunix` | AF_UNIX sockets (Wine MR !7650) | |
 | `com-context`, `storage-file`, `bcp47mrm` | WinRT/COM pieces modern games' runtimes call | |
 | `opengl-extensions` | upstream fix (Wine 11.19): OpenGL contexts below 3.0 list their GL extensions again; 11.17 gave legacy OpenGL games none, so no framebuffer objects | |
