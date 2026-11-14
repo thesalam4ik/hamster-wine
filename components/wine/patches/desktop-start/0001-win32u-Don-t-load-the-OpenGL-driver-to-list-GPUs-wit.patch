@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: CrashSystemZ <100166199+CrashSystemZ@users.noreply.github.com>
+Date: Sat, 14 Nov 2026 01:28:09 +0100
+Subject: [PATCH] win32u: Don't load the OpenGL driver to list GPUs without
+ EGL.
+
+lock_display_devices() asks get_opengl_gpus() for the GPUs OpenGL knows, and that loads the
+whole OpenGL driver first. Only EGL devices are listed, though, so a build without EGL (every
+macOS build) always gets an empty list. On macOS loading the driver means its pixel formats and
+a first GL context under Rosetta: 610 ms in explorer.exe /desktop on every cold start of a
+prefix, with every program waiting for the desktop meanwhile.
+
+Without EGL, return no OpenGL GPUs straight away. A program that uses OpenGL still loads the
+driver itself, when it first needs it.
+
+Original work for Hamster Launcher (LGPL-2.1-or-later).
+
+Topic: desktop-start
+---
+ dlls/win32u/opengl.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/dlls/win32u/opengl.c b/dlls/win32u/opengl.c
+--- a/dlls/win32u/opengl.c
++++ b/dlls/win32u/opengl.c
+@@ -3378,6 +3378,13 @@ BOOL get_opengl_gpus( struct list *gpus )
+ {
+     struct egl_platform *egl;
+ 
++#ifndef SONAME_LIBEGL
++    /* Only EGL devices are listed, so without EGL the list is always empty: don't initialize the
++     * OpenGL driver just to find that out. On macOS that is its pixel formats and a first context,
++     * ~0.6 s in the desktop process, which every program of a cold prefix waits for. */
++    return FALSE;
++#endif
++
+     if (!__wine_get_opengl_driver( WINE_OPENGL_DRIVER_VERSION )) return FALSE;
+ 
+     LIST_FOR_EACH_ENTRY( egl, &devices_egl, struct egl_platform, entry )

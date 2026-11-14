@@ -1,0 +1,108 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: CrashSystemZ <100166199+CrashSystemZ@users.noreply.github.com>
+Date: Sat, 14 Nov 2026 01:45:27 +0100
+Subject: [PATCH] win32u: List the Mac's fonts with
+ CTFontManagerCopyAvailableFontURLs.
+
+Every process that loads user32 loads the system fonts, and on macOS that started by building
+a font collection from the available fonts and copying the URL attribute of each of its
+descriptors. Under Rosetta that takes 63-79 ms per process, against 12-15 ms for loading the
+295 files it names; a cold start runs six such processes, two or three of them one after the
+other before a program's first window.
+
+CTFontManagerCopyAvailableFontURLs returns the same files in ~10 ms. The pfa/pfb filter and the
+set that removes duplicates stay; the resulting font list is the same, line for line.
+
+Original work for Hamster Launcher (LGPL-2.1-or-later).
+
+Topic: mac-font-list
+---
+ dlls/win32u/freetype.c | 48 +++++++++++-------------------------------
+ 1 file changed, 12 insertions(+), 36 deletions(-)
+
+diff --git a/dlls/win32u/freetype.c b/dlls/win32u/freetype.c
+--- a/dlls/win32u/freetype.c
++++ b/dlls/win32u/freetype.c
+@@ -1380,31 +1380,17 @@ static void load_mac_font_callback(const void *value, void *context)
+ 
+ static void load_mac_fonts(void)
+ {
+-    CFStringRef removeDupesKey;
+-    CFBooleanRef removeDupesValue;
+-    CFDictionaryRef options;
+-    CTFontCollectionRef col;
+-    CFArrayRef descs;
++    CFArrayRef available;
+     CFMutableSetRef urls;
+     CFIndex i;
+ 
+-    removeDupesKey = kCTFontCollectionRemoveDuplicatesOption;
+-    removeDupesValue = kCFBooleanTrue;
+-    options = CFDictionaryCreate(NULL, (const void**)&removeDupesKey, (const void**)&removeDupesValue, 1,
+-                                 &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+-    col = CTFontCollectionCreateFromAvailableFonts(options);
+-    if (options) CFRelease(options);
+-    if (!col)
++    /* Ask the font manager for the files of the available fonts. Descriptors of a font collection
++     * (CTFontCollectionCreateFromAvailableFonts) name the same files, but building them takes
++     * ~65 ms against ~10 ms under Rosetta, in every process that loads user32. */
++    available = CTFontManagerCopyAvailableFontURLs();
++    if (!available)
+     {
+-        WARN("CTFontCollectionCreateFromAvailableFonts failed\n");
+-        return;
+-    }
+-
+-    descs = CTFontCollectionCreateMatchingFontDescriptors(col);
+-    CFRelease(col);
+-    if (!descs)
+-    {
+-        WARN("CTFontCollectionCreateMatchingFontDescriptors failed\n");
++        WARN("CTFontManagerCopyAvailableFontURLs failed\n");
+         return;
+     }
+ 
+@@ -1412,38 +1398,28 @@ static void load_mac_fonts(void)
+     if (!urls)
+     {
+         WARN("CFSetCreateMutable failed\n");
+-        CFRelease(descs);
++        CFRelease(available);
+         return;
+     }
+ 
+-    for (i = 0; i < CFArrayGetCount(descs); i++)
++    for (i = 0; i < CFArrayGetCount(available); i++)
+     {
+-        CTFontDescriptorRef desc;
+-        CFURLRef url;
++        CFURLRef url = CFArrayGetValueAtIndex(available, i);
+         CFStringRef ext;
+ 
+-        desc = CFArrayGetValueAtIndex(descs, i);
+-        url = CTFontDescriptorCopyAttribute(desc, kCTFontURLAttribute);
+-        if (!url) continue;
+-
+         ext = CFURLCopyPathExtension(url);
+         if (ext)
+         {
+             BOOL skip = (CFStringCompare(ext, CFSTR("pfa"), kCFCompareCaseInsensitive) == kCFCompareEqualTo ||
+                          CFStringCompare(ext, CFSTR("pfb"), kCFCompareCaseInsensitive) == kCFCompareEqualTo);
+             CFRelease(ext);
+-            if (skip)
+-            {
+-                CFRelease(url);
+-                continue;
+-            }
++            if (skip) continue;
+         }
+ 
+         CFSetAddValue(urls, url);
+-        CFRelease(url);
+     }
+ 
+-    CFRelease(descs);
++    CFRelease(available);
+ 
+     CFSetApplyFunction(urls, load_mac_font_callback, NULL);
+     CFRelease(urls);

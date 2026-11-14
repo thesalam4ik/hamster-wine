@@ -51,6 +51,8 @@ patch, push, and the new runtime is out. `package.json` of the newest release is
 | `background-fps` | at most n frames a second (D3DMetal, Vulkan) while the game is not the active app | `WINEMAC_BACKGROUND_FPS=<n>` |
 | `afunix` | AF_UNIX sockets (Wine MR !7650) | |
 | `com-context`, `storage-file`, `bcp47mrm` | WinRT/COM pieces modern games' runtimes call | |
+| `desktop-start` | without EGL (every macOS build), list no OpenGL GPUs instead of loading the whole OpenGL driver to find none: 0.6 s less in `explorer.exe /desktop`, which every program of a cold prefix waits for | |
+| `mac-font-list` | the Mac's font files from `CTFontManagerCopyAvailableFontURLs` instead of a font collection's descriptors: ~10 ms instead of ~70 ms in every process that loads user32, same font list | |
 | `opengl-extensions` | upstream fix (Wine 11.19): OpenGL contexts below 3.0 list their GL extensions again; 11.17 gave legacy OpenGL games none, so no framebuffer objects | |
 
 ## Working on a patch

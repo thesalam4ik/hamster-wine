@@ -16,6 +16,7 @@ and its origin in its message:
 - `fps-log`, `window-title`, `bundle-icon`, `com-context`, `storage-file`, `bcp47mrm`: macrock-engine and
   SiliconBedrock authors.
 - `host-loader`, `background-fps`: written for Hamster Launcher, added 2026-11-12.
+- `desktop-start`, `mac-font-list`: written for Hamster Launcher, added 2026-11-14.
 
 ## Scripts
 
